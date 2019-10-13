@@ -24,7 +24,8 @@
 
 ## AWS EKS
 
-- 
+- Multi-AZ Kubernetes control plane deployment managed by AWS
+- ~$150USD/monthly
 
 [AWS EKS Documentation]()
 
@@ -54,7 +55,34 @@ Good use for:
 
 [AWS Spot Fleet Documentation]()
 
+## 
+
+# Install
+
+## Cluster AutoScaler (CA)
+
+`sed -i '' "s/<INSERT-YOUR-SPOT-INSTANCES-ASG-NAME-HERE>/test/g" "k8s-tools/cluster_autoscaler/cluster_autoscaler.yml"`
+
+## Horizontal Pod Autoscaler
+
+```bash
+helm install stable/metrics-server \
+    --name metrics-server \
+    --version 2.0.2 \
+    --namespace metrics
+
+kubectl run php-apache --image=k8s.gcr.io/hpa-example --requests=cpu=200m --limits=cpu=500m --expose --port=80
+
+kubectl expose deploy php-apache --target-port=80 --port=80 --type=LoadBalancer
+
+kubectl autoscale deployment php-apache --cpu-percent=30 --min=1 --max=10
+
+```
+
 # Tips and Gotchas
+
+- ebs volumes cannot span multple aws availability zone
+- efs for multiaz support to permanent volumes
 
 
 # Bonus - CKA&CKAD tips
@@ -63,6 +91,9 @@ Good use for:
 
 - best content around -- Linux Academy CKA course 
 - bookmarks for Kubernetes documentation
+- no need for auto-completion as the terminal comes pre-configured
+- you can split view your browser with k8s documentation and the exam (only these two tabs open)
+- book exam in the morning so you are 100% for a 3 hours exam
 - basic set of aliases on `.bash_profile` first thing once the test start
 ```
 alias k='kubectl'
@@ -76,9 +107,6 @@ alias kc='k create'
 alias kd='k delete'
 alias kg='k get'
 ```
-- no need for auto-completion as the terminal comes pre-configured
-- you can split view your browser with k8s documentation and the exam (only these two tabs open)
-- book exam in the morning so you are 100% -- 3 hours exam
 
 # References
 
@@ -111,3 +139,26 @@ https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler/cloudpro
 
 - Re:Invent 2018 Spot Instances with EKS:
 https://www.slideshare.net/AmazonWebServices/amazon-ec2-spot-with-amazon-eks-con406r1-aws-reinvent-2018
+
+https://s3.amazonaws.com/aws-quickstart/quickstart-amazon-eks/doc/amazon-eks-architecture.pdf
+
+https://kubernetes.io/docs/concepts/architecture/cloud-controller/
+
+https://kubernetes.io/images/docs/kubectl_drain.svg
+
+
+i=0
+while true
+do
+http_status=`curl -s -o /dev/null -w "%{http_code}" www.apache.contino.caiotrevisan.com --connect-timeout 1`
+echo request $i - $http_status
+sleep 1
+i=$((i + 1))
+done
+
+
+www.kubeview.contino.caiotrevisan.com
+www.apache.contino.caiotrevisan.com
+www.pi.contino.caiotrevisan.com
+
+while true; do wget -q -O - http://www.apache.contino.caiotrevisan.com &&; done

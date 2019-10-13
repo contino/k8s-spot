@@ -2,7 +2,7 @@ apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
-    name: eks-example
+    name: caio-eks-test
     region: ap-southeast-2
 
 nodeGroups:
