@@ -6,12 +6,18 @@
 
 - [whois](#whois)
 - [Introduction](#introduction)
-  - [AWS EKS](#aws-eks)
-  - [AWS EC2 Purchase Options](#aws-ec2-purchase-options)
-  - [AWS Spot Instances](#aws-spot-instances)
-  - [AWS Spot Fleet](#aws-spot-fleet)
+    - [AWS AWS Amazon Elastic Container Service for Kubernetes (EKS)](#aws-amazon-elastic-container-service-for-kubernetes-(eks))
+    - [AWS EC2 Purchase Options](#aws-ec2-purchase-options)
+    - [AWS Spot Instances](#aws-spot-instances)
+    - [AWS Spot Fleet](#aws-spot-fleet)
+    - [AWS Auto Scaling Group](#aws-auto-scaling-group)
+- [Use Cases](#use-cases)
+- [Lab demo](#lab-demo)
+    - [Spot Interrupt Handler](#spot-interrupt-handler)
+    - [Cluster AutoScaler (CA)](#cluster-autoscaler-(ca))
+    - [Horizontal Pod Autoscaler](#horizontal-pod-autoscaler)
 - [Tips and Gotchas](#tips-and-gotchas)
-- [Bonus - CKA&CKAD Tips](#bonus---cka&ckad-tips)
+- [Bonus CKA & CKAD Tips](#bonus-cka-&-ckad-tips)
 - [References](#references)
 
 # whois
@@ -22,18 +28,24 @@
 
 # Introduction
 
-## AWS EKS
+## AWS Amazon Elastic Container Service for Kubernetes (EKS)
+
+<img src="images/eks-architecture.png" width="300">
 
 - Multi-AZ Kubernetes control plane deployment managed by AWS
+- auto-healing
+- ondemand patching and upgrades
 - ~$150USD/monthly
 
-[AWS EKS Documentation]()
+- need workers -- pay separately
+
+[AWS EKS Documentation](https://aws.amazon.com/eks/)
 
 ## AWS EC2 Purchase Options
 
-- On-Demand: pay by the second
-- Reserved Instances: one to three-year commitment upfront
-- Spot Instances : bid for spare EC2 capacity
+- On-Demand: pay by the hour or second  
+- Reserved Instances: up to 75% discount, one to three-year commitment
+- Spot Instances: bid for spare EC2 capacity, up to 90% discount
 
 [AWS EC2 Pricing Documentation](https://aws.amazon.com/ec2/pricing/)
 
@@ -51,13 +63,45 @@ Good use for:
 
 [AWS EC2 Spot Instances Documentation](https://aws.amazon.com/ec2/spot/)
 
+### Pricing History
+
+Pricing of a `m5.large` instance from `Jul/19` to `Oct19` in region SydneyAU `ap-southeast-2`.
+
+|Instance Type|Price|
+|-|-|
+|On-demand|0.12|
+|Spot|0.0362|
+
+![](images/spot-pricing-history.png)
+
+### Spot Instance Advisor
+
+![](images/spot-pricing.png)
+
+[AWS Spot Instances Advisor](https://aws.amazon.com/ec2/spot/instance-advisor/)
+
+
 ## Spot Fleet
 
-[AWS Spot Fleet Documentation]()
+- collection/group/fleet of spot instances
+- request is fulfilled either by reaching target capacity or exceeding the maximum price
 
-## 
+### Spot Fleet Request
 
-# Install
+- one-time / maintain
+- launch specifications: instance types / az (up to 50)
+- target capacity
+- on-demand portion
+- defined price vs on-demand price
+
+[AWS Spot Fleet Documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet.html)
+
+# Use cases
+
+# Lab demo
+
+## Spot Interrup Handler
+
 
 ## Cluster AutoScaler (CA)
 
@@ -76,7 +120,27 @@ kubectl run php-apache --image=k8s.gcr.io/hpa-example --requests=cpu=200m --limi
 kubectl expose deploy php-apache --target-port=80 --port=80 --type=LoadBalancer
 
 kubectl autoscale deployment php-apache --cpu-percent=30 --min=1 --max=10
+```
 
+[Kubernetes HPA Documentation](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/)
+
+### generate load
+
+```bash
+while true; do wget -q -O - http://www.apache.contino.caiotrevisan.com &&; done
+```
+
+### continuous service test
+
+```bash
+i=0
+while true
+do
+http_status=`curl -s -o /dev/null -w "%{http_code}" www.apache.contino.caiotrevisan.com --connect-timeout 1`
+echo request $i - $http_status
+sleep 1
+i=$((i + 1))
+done
 ```
 
 # Tips and Gotchas
@@ -84,8 +148,7 @@ kubectl autoscale deployment php-apache --cpu-percent=30 --min=1 --max=10
 - ebs volumes cannot span multple aws availability zone
 - efs for multiaz support to permanent volumes
 
-
-# Bonus - CKA&CKAD tips
+# Bonus CKA & CKAD tips
 
 [Contino Ultimate Guide to Passing the CKA Exam](https://www.contino.io/insights/the-ultimate-guide-to-passing-the-cka-exam)
 
@@ -140,25 +203,15 @@ https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler/cloudpro
 - Re:Invent 2018 Spot Instances with EKS:
 https://www.slideshare.net/AmazonWebServices/amazon-ec2-spot-with-amazon-eks-con406r1-aws-reinvent-2018
 
+- AWS Getting Started with EKS:
+https://aws.amazon.com/getting-started/projects/deploy-kubernetes-app-amazon-eks/
+
+- AWS Quickstart EKS:
 https://s3.amazonaws.com/aws-quickstart/quickstart-amazon-eks/doc/amazon-eks-architecture.pdf
 
-https://kubernetes.io/docs/concepts/architecture/cloud-controller/
+- Kubernetes Docs:
+https://kubernetes.io/docs/
 
+- kubectl drain:
 https://kubernetes.io/images/docs/kubectl_drain.svg
 
-
-i=0
-while true
-do
-http_status=`curl -s -o /dev/null -w "%{http_code}" www.apache.contino.caiotrevisan.com --connect-timeout 1`
-echo request $i - $http_status
-sleep 1
-i=$((i + 1))
-done
-
-
-www.kubeview.contino.caiotrevisan.com
-www.apache.contino.caiotrevisan.com
-www.pi.contino.caiotrevisan.com
-
-while true; do wget -q -O - http://www.apache.contino.caiotrevisan.com &&; done
