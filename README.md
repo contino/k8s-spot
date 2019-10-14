@@ -2,9 +2,14 @@
 
 # How to save money running EKS Workers on Spot Instances
 
+# whois
+
+*Caio Trevisan* - Cloud Engineer at Contino
+
+[www.caiotrevisan.com](https://www.caiotrevisan.com)
+
 # Agenda
 
-- [whois](#whois)
 - [Introduction](#introduction)
     - [AWS AWS Amazon Elastic Container Service for Kubernetes (EKS)](#aws-amazon-elastic-container-service-for-kubernetes-(eks))
     - [AWS EC2 Purchase Options](#aws-ec2-purchase-options)
@@ -31,12 +36,6 @@
 - [Tips and Gotchas](#tips-and-gotchas)
 - [Bonus CKA & CKAD Tips](#bonus-cka-&-ckad-tips)
 - [References](#references)
-
-# whois
-
-*Caio Trevisan* - Cloud Engineer at Contino
-
-[www.caiotrevisan.com](https://www.caiotrevisan.com)
 
 # Introduction
 
