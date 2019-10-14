@@ -33,8 +33,8 @@
 - [Lab Demos](#lab-demo)
     - [demo 1 - spot termination notice](#demo-1---spot-termination-notice)
     - [demo 2 - cluster auto scaling](#demo-2---cluster-auto-scaling)
-- [Tips and Gotchas](#tips-and-gotchas)
-- [Bonus CKA & CKAD Tips](#bonus-cka-&-ckad-tips)
+- [Tips](#tips)
+- [Bonus CKA & CKAD](#bonus-cka-&-ckad)
 - [References](#references)
 
 # Introduction
@@ -344,7 +344,7 @@ kubectl expose deployment nginx --port=80 --target-port=80 --type=LoadBalancer
     - once no nodes available for schedule pods, CA should scale up the cluster
 
 
-# Tips and Gotchas
+# Tips
 
 ### ebs volumes
 
@@ -364,16 +364,20 @@ kubectl expose deployment nginx --port=80 --target-port=80 --type=LoadBalancer
 - keep pods with `requests/limits` close to real needs
 - avoid local storage
 
-# Bonus CKA & CKAD tips
+# Bonus CKA & CKAD
 
 [Contino Ultimate Guide to Passing the CKA Exam](https://www.contino.io/insights/the-ultimate-guide-to-passing-the-cka-exam)
 
 - best content around -- Linux Academy CKA course 
+- keep track of questions and weight as you go on the notepad
+    - skip if it's too hard and worth less than 5%
+    - you only need 74% and 66% to pass
 - bookmarks for Kubernetes documentation
 - no need for auto-completion as the terminal comes pre-configured
 - you can split view your browser with k8s documentation and the exam (only these two tabs open)
 - book exam in the morning so you are 100% for a 3 hours exam
 - basic set of aliases on `.bash_profile` first thing once the test start
+
 ```
 alias k='kubectl'
 alias kgp='k get po'
