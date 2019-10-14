@@ -21,3 +21,10 @@ data "aws_iam_instance_profile" "eks_worker" {
 data "aws_iam_role" "fleet_role" {
   name = var.fleet_role_name
 }
+
+data "aws_security_group" "selected" {
+  filter {
+    name   = "tag:Name"
+    values = [var.eks_sg_name]
+  }
+}

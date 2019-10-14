@@ -14,7 +14,7 @@ resource "aws_spot_fleet_request" "sport-workers" {
       associate_public_ip_address = true
       ami                         = var.instance_ami_id
       iam_instance_profile_arn    = data.aws_iam_instance_profile.eks_worker.arn
-      vpc_security_group_ids      = [aws_security_group.allow_all.id]
+      vpc_security_group_ids      = [data.aws_security_group.selected.id]
       tags = {
         Name                                            = "${var.cluster_name}-spot-instances-Node",
         "alpha.eksctl.io/cluster-name"                  = "${var.cluster_name}",
@@ -27,25 +27,5 @@ resource "aws_spot_fleet_request" "sport-workers" {
       }
       user_data = base64encode(data.template_file.userdata.rendered)
     }
-  }
-}
-
-resource "aws_security_group" "allow_all" {
-  name        = "Allow all ingress"
-  description = "Allow all ingress"
-  vpc_id      = data.aws_vpc.selected.id
-
-  ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = -1
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = -1
-    cidr_blocks = ["0.0.0.0/0"]
   }
 }

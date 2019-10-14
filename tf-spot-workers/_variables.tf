@@ -18,6 +18,10 @@ variable "vpc_name" {
   default = "eksctl-caio-eks-test-cluster/VPC"
 }
 
+variable "eks_sg_name" {
+  default = "eksctl-caio-eks-test-nodegroup-spot-instances/SG"
+}
+
 variable "spot_instances" {
   default = [
     {

@@ -297,25 +297,6 @@ helm install stable/kube-ops-view --name kube-ops-view --set service.type=LoadBa
 
 `kubectl get svc kube-ops-view | tail -n 1 | awk '{ print "Kube-ops-view URL = http://"$4 }'`
 
-### generate load
-
-```bash
-while true; do wget -q -O - http://www.apache.contino.caiotrevisan.com &&; done
-```
-
-### continuous service test
-
-```bash
-i=0
-while true
-do
-http_status=`curl -s -o /dev/null -w "%{http_code}" www.apache.contino.caiotrevisan.com --connect-timeout 1`
-echo request $i - $http_status
-sleep 1
-i=$((i + 1))
-done
-```
-
 # Lab Demo
 
 - cluster created with `eksctl` using all default settings
