@@ -24,11 +24,10 @@
     - [Spot Interrupt Handler](#spot-interrupt-handler)
     - [Horizontal Pod Autoscaler (HPA)](#horizontal-pod-autoscaler-(hpa))
     - [Affinity/Taints/Tolerations](#affinity/taints/tolerations)
-    - [Kubernetes Operational View](#kubernetes-operational-view) 
-- [Lab demo](#lab-demo)
-    - [Spot Interrupt Handler](#spot-interrupt-handler)
-    - [Cluster AutoScaler (CA)](#cluster-autoscaler-(ca))
-    - [Horizontal Pod Autoscaler](#horizontal-pod-autoscaler)
+    - [Kubernetes Operational View](#kubernetes-operational-view)
+- [Lab Demos](#lab-demo)
+    - [demo 1 - spot termination notice](#demo-1---spot-termination-notice)
+    - [demo 2 - cluster auto scaling](#demo-2---cluster-auto-scaling)
 - [Tips and Gotchas](#tips-and-gotchas)
 - [Bonus CKA & CKAD Tips](#bonus-cka-&-ckad-tips)
 - [References](#references)
@@ -162,7 +161,7 @@ PS.: think ahead and overprovision in case of any expected event
 - CA is not based on actual load but instead in `requests/limits`
     - how much memory/cpu you allocate to a pod
 
-### Installation
+### CA Installation
 
 - Update your ASG name so the service can trigger the scale up/down for you
 
@@ -183,7 +182,7 @@ PS.: think ahead and overprovision in case of any expected event
 - drain the node -- taint as NoSchedule
 - node can be gracefully removed
 
-### Installation
+### SIH Installation
 
 - Run the Spot Interrup Handler Daemonset
 
@@ -196,7 +195,7 @@ PS.: think ahead and overprovision in case of any expected event
 
 [Kubernetes HPA Documentation](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/)
 
-### Installation and test
+### HPA Installation
 
 - Install metrics server for pod load monitoring
 
@@ -233,8 +232,13 @@ while true; do wget -q -O- http://php-apache.default.svc.cluster.local; done
 ## Affinity/Taints/Tolerations
 
 - affinity attracts pods to a set of nodes
+    - create rules based on labels to: 
+        - hard: need to match label 
+        - soft: preference to match but not required
 - taints allow nodes to repel pods
 - tolerations are applied to pods to allow (not require) schedule with matching taints
+
+[Taints and Tolerations](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/)
 
 ### Example
 
@@ -251,16 +255,36 @@ tolerations:
   effect: "NoSchedule"
 ```
 
-[Taints and Tolerations](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/)
+- Hard and soft affinities:
+
+```yaml
+affinity:  
+    nodeAffinity: 
+        requiredDuringSchedulingIgnoredDuringExecution: 
+            nodeSelectorTerms: 
+            - matchExpressions: 
+                - key: jobType 
+                operator: In 
+                values: 
+                - batch 
+        preferredDuringSchedulingIgnoredDuringExecution: 
+        - weight: 1 
+        preference: 
+            matchExpressions: 
+            - key: instanceType 
+            operator: In 
+            values: 
+            - Ec2Spot
+```
 
 ## Kubernetes Operational View
 
 - Visual graphics of cluster working
-- 
+- good for learning and dashboards
 
 [Kubernetes Operational View Documentation](https://github.com/hjacobs/kube-ops-view)
 
-### Installation
+### KOV Installation
 
 - Instal via helm
 
@@ -291,6 +315,54 @@ sleep 1
 i=$((i + 1))
 done
 ```
+
+# Lab Demo
+
+- cluster created with `eksctl` using all default settings
+
+`eksctl create cluster caio-eks-test`
+
+- deploy [CA](#ca-installation), [Spot Interrupt Handler](#sih-installation), [metrics server](#hpa-installation) and [Kubernetes Operational Viewer](#kov-installation) to your cluster
+- run `kubectl apply -f k8s-tools/monte-carlo.yaml` so it can fill existing nodes with workloads
+
+## demo 1 - spot termination notice
+
+- spot instance workers via Spot Fleet Request using terraform
+
+### USE AT YOUR OWN RISK - EXAMPLE POLICIES ARE VERY PERMISSIVE 
+
+- go to `tf-spot-workers` folder and update variables according to your recently create EKS cluster before applying
+
+- wait until the new instance joins the cluster
+
+- run a nginx pod and expose it
+
+```
+kubectl run nginx --image=nginx
+kubectl expose deployment nginx --port=80 --target-port=80 --type=LoadBalancer
+```
+
+- make sure the `nginx` replica is running on the spot instance node
+
+- run `test_url.sh <service-url>` for constant polling the url
+
+- go to AWS console Spot Fleet Requests and modify the fleet target capacity to 0
+    - this will trigger the termination notice
+
+![](images/fleet-target-capacity.png)
+
+- observe:
+    - the pod needs to be reallocated to a healthy node before the node is removed
+    - service will have little to none interruption on the polling
+
+## demo 2 - cluster auto scaling
+
+- run [HPA load test steps](#hpa-installation) to create a `php-apache` pod and generate some load
+
+- behaviour to expect/monitor through the dashboard:
+    - HPA scale deployment replicas based on CPU load
+    - once no nodes available for schedule pods, CA should scale up the cluster
+
 
 # Tips and Gotchas
 

@@ -1,5 +1,5 @@
 i=0
-url=www.apache.contino.caiotrevisan.com
+url=$1
 while true
 do
 http_status=`curl -s -o /dev/null -w "%{http_code}" $url --connect-timeout 0 --max-time 1 --retry 0`
