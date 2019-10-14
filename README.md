@@ -22,7 +22,6 @@
     - [failover](#failover)
     - [CICD private runners](#cicd-private-runners)
     - [intensive tasks](#intensive-tasks)
-    - [EMR jobs](#emr-jobs)
     - [state persistence](#state-persistence)
 - [How to Achieve That?](#how-to-achieve-that?)
     - [Cluster AutoScaler (CA)](#cluster-autoscaler-(ca))
@@ -71,7 +70,7 @@ Good use for:
 
 - Flexible start/end times
 - Applications that handle well failure
-- Large computing needs for jobs like EMR or Data processing
+- Large computing needs for jobs like data processing
 
 [AWS EC2 Spot Instances Documentation](https://aws.amazon.com/ec2/spot/)
 
@@ -135,10 +134,6 @@ PS.: think ahead and overprovision in case of any expected event
 
 - Western Digital has run a simulation of close to 2.5million tasks in just 8 hours with more than 50k instances (1 million vCPU!!) costing around $140kUSD. Estimated in half of the costs of running even on in-house infrastructure.
 - S3 were used to save data results and checkpoints when the instance were schedule to terminate
-
-## EMR jobs
-
-- spot blocks can reserve a period from 1 to 6 hours to run without interruption 
 
 ## state persistence
 
@@ -348,7 +343,7 @@ kubectl expose deployment nginx --port=80 --target-port=80 --type=LoadBalancer
 
 ### ebs volumes
 
-- ebs volumes cannot span multple aws availability zone
+- ebs volumes cannot span multiple aws availability zone
 - use either Affinity rules and/or taint/tolerations to force use of nodes
 - efs for multiaz agnostic
 
