@@ -12,6 +12,19 @@
     - [AWS Spot Fleet](#aws-spot-fleet)
     - [AWS Auto Scaling Group](#aws-auto-scaling-group)
 - [Use Cases](#use-cases)
+    - [peak traffic](#peak-traffic)
+    - [batch jobs](#batch-jobs)
+    - [failover](#failover)
+    - [CICD private runners](#cicd-private-runners)
+    - [intensive tasks](#intensive-tasks)
+    - [EMR jobs](#emr-jobs)
+    - [state persistence](#state-persistence)
+- [How to Achieve That?](#how-to-achieve-that?)
+    - [Cluster AutoScaler (CA)](#cluster-autoscaler-(ca))
+    - [Spot Interrupt Handler](#spot-interrupt-handler)
+    - [Horizontal Pod Autoscaler (HPA)](#horizontal-pod-autoscaler-(hpa))
+    - [Affinity/Taints/Tolerations](#affinity/taints/tolerations)
+    - [Kubernetes Operational View](#kubernetes-operational-view) 
 - [Lab demo](#lab-demo)
     - [Spot Interrupt Handler](#spot-interrupt-handler)
     - [Cluster AutoScaler (CA)](#cluster-autoscaler-(ca))
@@ -54,6 +67,7 @@
 - predictable pricing
 - up to 90% of savings
 - termination notice
+    - ~2 minutes -- metadada warning
 
 Good use for:
 
@@ -98,31 +112,166 @@ Pricing of a `m5.large` instance from `Jul/19` to `Oct19` in region SydneyAU `ap
 
 # Use cases
 
-# Lab demo
+## peak traffic
 
-## Spot Interrup Handler
+- two set of worker nodes
+    - spot: scale up above 70% of load
+    - ondemand: scale up above 90% of load
 
+PS.: think ahead and overprovision in case of any expected event
+
+## batch jobs
+
+- queue requests on SQS or any other queue service
+- scale workers based on quantity of jobs queued
+
+## failover
+
+- Taint spot workers with `PreferNoSchedule` so jobs will run first on ondemand workers and only if not resources available will use Spot anyway
+
+## CICD private runners
+
+- as non-critical services that can retry in case of failing make a good use case for savings
+
+## intensive tasks
+
+- Western Digital has run a simulation of close to 2.5million tasks in just 8 hours with more than 50k instances (1 million vCPU!!) costing around $140kUSD. Estimated in half of the costs of running even on in-house infrastructure.
+- S3 were used to save data results and checkpoints when the instance were schedule to terminate
+
+## EMR jobs
+
+- spot blocks can reserve a period from 1 to 6 hours to run without interruption 
+
+## state persistence
+
+- use lambda with cloudwatch events or builtin application function for:
+    - re-assigning elastic IP 
+    - load balancer handling
+    - update DNS entries
+    - any environment changes
+
+# How to Achieve That?
 
 ## Cluster AutoScaler (CA)
 
-`sed -i '' "s/<INSERT-YOUR-SPOT-INSTANCES-ASG-NAME-HERE>/test/g" "k8s-tools/cluster_autoscaler/cluster_autoscaler.yml"`
+- scale up/down NODES when pods are not able to be scheduled
+    - keeps checking for pendind pods
+- send a api call to the ASG when scale is needed
+- userdata/scripts insert the new node to the cluster
+- kubernetes allocate pods to newly added nodes
+- CA is not based on actual load but instead in `requests/limits`
+    - how much memory/cpu you allocate to a pod
 
-## Horizontal Pod Autoscaler
+### Installation
 
-```bash
-helm install stable/metrics-server \
-    --name metrics-server \
-    --version 2.0.2 \
-    --namespace metrics
+- Update your ASG name so the service can trigger the scale up/down for you
 
-kubectl run php-apache --image=k8s.gcr.io/hpa-example --requests=cpu=200m --limits=cpu=500m --expose --port=80
+`sed -i '' "s/<INSERT-YOUR-SPOT-INSTANCES-ASG-NAME-HERE>/test/g" "k8s-tools/cluster-autoscaler/cluster_autoscaler.yml"`
 
-kubectl expose deploy php-apache --target-port=80 --port=80 --type=LoadBalancer
+- Run the CA deployment
 
-kubectl autoscale deployment php-apache --cpu-percent=30 --min=1 --max=10
-```
+`kubectl apply -f k8s-tools/cluster-autoscaler`
+
+- Watch logs
+
+`kubectl logs -f deployment/cluster-autoscaler -n kube-system`
+
+## Spot Interrupt Handler
+
+- run as daemonsets
+- keep polling instance metadata for termination notice
+- drain the node -- taint as NoSchedule
+- node can be gracefully removed
+
+### Installation
+
+- Run the Spot Interrup Handler Daemonset
+
+`kubectl apply -f k8s-toolks/spot-interrupt-handler`
+
+## Horizontal Pod Autoscaler (HPA)
+
+- Auto scale at pod level based on cpu utilisation
+- query utilisation every 15 seconds
 
 [Kubernetes HPA Documentation](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/)
+
+### Installation and test
+
+- Install metrics server for pod load monitoring
+
+`helm install stable/metrics-server --name metrics-server --version 2.0.2 --namespace metrics`
+ 
+- Create a test deployment and expose it
+
+`kubectl run php-apache --image=k8s.gcr.io/hpa-example --requests=cpu=200m --limits=cpu=500m`
+
+- Create deployment autoscaler
+
+`kubectl autoscale deployment php-apache --cpu-percent=30 --min=1 --max=10`
+
+- Expose the service
+
+`kubectl expose deploy php-apache --target-port=80 --port=80 --type=LoadBalancer`
+
+- Increase load
+
+```bash
+kubectl run -i --tty load-generator --image=busybox /bin/sh
+
+Hit enter for command prompt
+
+while true; do wget -q -O- http://php-apache.default.svc.cluster.local; done
+```
+
+- Monitor HPA and deployment
+
+`kubectl get hpa -w`
+
+`kubectl get deployment php-apache -w`
+
+## Affinity/Taints/Tolerations
+
+- affinity attracts pods to a set of nodes
+- taints allow nodes to repel pods
+- tolerations are applied to pods to allow (not require) schedule with matching taints
+
+### Example
+
+- Node tainted with NoSchedule
+
+`kubectl taint nodes node1 key=value:NoSchedule`
+
+- A pod needs a toleration to be able to run on that node
+
+```yaml
+tolerations:
+- key: "key"
+  operator: "Exists"
+  effect: "NoSchedule"
+```
+
+[Taints and Tolerations](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/)
+
+## Kubernetes Operational View
+
+- Visual graphics of cluster working
+- 
+
+[Kubernetes Operational View Documentation](https://github.com/hjacobs/kube-ops-view)
+
+### Installation
+
+- Instal via helm
+
+```
+helm repo update
+helm install stable/kube-ops-view --name kube-ops-view --set service.type=LoadBalancer --set rbac.create=True
+```
+
+- Get service url
+
+`kubectl get svc kube-ops-view | tail -n 1 | awk '{ print "Kube-ops-view URL = http://"$4 }'`
 
 ### generate load
 
@@ -145,8 +294,23 @@ done
 
 # Tips and Gotchas
 
+### ebs volumes
+
 - ebs volumes cannot span multple aws availability zone
-- efs for multiaz support to permanent volumes
+- use either Affinity rules and/or taint/tolerations to force use of nodes
+- efs for multiaz agnostic
+
+### Cluster Autoscaler (CA)
+
+- currently does not support multi az
+    - one ASG per az and enable `--balance-similar-node-groups` feature
+- require to exists `/etc/ssl/certs/ca-bundle.crt` in your cluster.
+    - tools like `kops` need customization
+- by default CA won't move pods on `kube-system` namespace
+    - you can change this behaviour
+- you can overprosion with `pause pods`
+- keep pods with `requests/limits` close to real needs
+- avoid local storage
 
 # Bonus CKA & CKAD tips
 
