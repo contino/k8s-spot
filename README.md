@@ -135,14 +135,6 @@ PS.: think ahead and overprovision in case of any expected event
 - Western Digital has run a simulation of close to 2.5million tasks in just 8 hours with more than 50k instances (1 million vCPU!!) costing around $140kUSD. Estimated in half of the costs of running even on in-house infrastructure.
 - S3 were used to save data results and checkpoints when the instance were schedule to terminate
 
-## state persistence
-
-- use lambda with cloudwatch events or builtin application function for:
-    - re-assigning elastic IP 
-    - load balancer handling
-    - update DNS entries
-    - any environment changes
-
 # How to Achieve That?
 
 ## Cluster AutoScaler (CA)
@@ -340,6 +332,14 @@ kubectl expose deployment nginx --port=80 --target-port=80 --type=LoadBalancer
 
 
 # Tips
+
+### state persistence
+
+- use lambda with cloudwatch events or builtin application function for:
+    - re-assigning elastic IP 
+    - load balancer handling
+    - update DNS entries
+    - any environment changes
 
 ### ebs volumes
 
